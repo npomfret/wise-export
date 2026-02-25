@@ -7,7 +7,8 @@
     "build": "tsc",
     "sync": "npx tsx src/sync-monthly-pdf-statements.ts && npx tsx src/activities.ts",
     "sync:statements": "npx tsx src/sync-monthly-pdf-statements.ts",
-    "sync:activities": "npx tsx src/activities.ts && npx tsx src/activities-to-csv.ts"
+    "sync:activities": "npx tsx src/activities.ts && npx tsx src/activities-to-csv.ts",
+    "activities:csv": "npx tsx src/activities-to-csv.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

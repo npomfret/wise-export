@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { loadConfig } from "./shared";
 
 const INPUT_FILE = path.join(__dirname, "..", "tmp", "activities-raw.json");
-const OUTPUT_FILE = path.join(__dirname, "..", "tmp", "activities.csv");
 
 function stripHtml(s: string): string {
   return s.replace(/<[^>]+>/g, "");
@@ -31,9 +31,12 @@ function activityToRow(a: any): string[] {
   const title = stripHtml(a.shortTitle ?? a.title ?? "");
   const description = a.description ?? "";
 
-  const direction = (a.primaryAmount ?? "").includes("<positive>") ? "credit" : "debit";
+  const isPositive = (a.primaryAmount ?? "").includes("<positive>");
+  const isOut = a.thumbnail === "icon://out";
   const [amount, currency] = parseAmount(a.primaryAmount ?? "");
   const [secondaryAmount, secondaryCurrency] = parseAmount(a.secondaryAmount ?? "");
+  const isFxTransfer = secondaryCurrency && currency !== secondaryCurrency;
+  const direction = isFxTransfer ? "transfer" : isPositive ? "credit" : isOut ? "debit" : "debit";
 
   return [
     date,
@@ -47,7 +50,7 @@ function activityToRow(a: any): string[] {
     secondaryCurrency ?? "",
     a.category ?? "",
     a.status ?? "",
-    a.id ?? "",
+    a.resource?.id ?? "",
   ];
 }
 
@@ -56,6 +59,10 @@ function main() {
     console.error(`No raw data found at ${INPUT_FILE} — run sync:activities first.`);
     process.exit(1);
   }
+
+  const config = loadConfig();
+  const statementsDir = config.statementsDir.replace(/^~/, process.env.HOME!);
+  const outputFile = path.join(statementsDir, "activities.csv");
 
   const activities: any[] = JSON.parse(fs.readFileSync(INPUT_FILE, "utf-8"));
 
@@ -66,8 +73,9 @@ function main() {
   const rows = activities.map(activityToRow);
   const csv = [COLUMNS.join(","), ...rows.map(row => row.map(csvEscape).join(","))].join("\n");
 
-  fs.writeFileSync(OUTPUT_FILE, csv);
-  console.log(`${activities.length} activities → ${OUTPUT_FILE}`);
+  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
+  fs.writeFileSync(outputFile, csv);
+  console.log(`${activities.length} activities → ${outputFile}`);
 }
 
 main();
