@@ -1,6 +1,6 @@
 # wise-export
 
-An unofficial tool to bulk-export PDF statements from [Wise](https://wise.com) (formerly TransferWise) personal accounts.
+An unofficial tool to bulk-export PDF statements and transaction history from [Wise](https://wise.com) (formerly TransferWise) personal accounts.
 
 ## Background
 
@@ -34,17 +34,18 @@ Edit `config.json` with your details:
   "profileId": "1234567",
   "cookies": "...",
   "currencies": ["EUR", "GBP", "USD", "CAD"],
-  "delayMs": 1000
+  "statementsDir": "~/Documents/path/to/statements"
 }
 ```
 
 | Field | Description |
 |---|---|
-| `startDate` | First month to export (YYYY-MM). Statements are generated from this month up to (but not including) the current month. |
+| `startDate` | First month to export (YYYY-MM). Statements are generated month-by-month from this date; activities are fetched for the full range in one go. |
 | `profileId` | Your Wise profile ID (see below). |
 | `cookies` | Your browser session cookies (see below). |
 | `currencies` | List of currency codes to export statements for. Balance IDs are fetched automatically. |
-| `delayMs` | Optional delay between API requests in milliseconds (default: 1000). |
+| `statementsDir` | Directory where PDF statements are saved, organized into currency subdirectories. Supports `~` for home directory. |
+| `delayMs` | Optional delay between API requests in milliseconds (default: 1000) — to prevent rate limiting. |
 
 ### Getting your profile ID and cookies
 
@@ -60,20 +61,71 @@ Edit `config.json` with your details:
 
 ## Usage
 
+### Sync everything
+
 ```bash
 npm run sync
 ```
 
-The script runs two concurrent tasks:
+Runs statement sync followed by activities sync.
+
+### Sync PDF statements only
+
+```bash
+npm run sync:statements
+```
+
+Runs two concurrent tasks:
 
 1. **Creator** — iterates through each currency/month combination, posts a statement creation request, and queues the request ID for download
 2. **Downloader** — polls the queue, downloading generated PDFs as they become ready, retrying if a statement isn't available yet
 
-Output files are saved to `statements/` as `YYYY-MM-01.CCY.statement.pdf`.
+PDF statements are saved into currency subdirectories:
 
-Progress is persisted to `tmp/pending.json`, and already-downloaded statements are skipped, so you can safely re-run `npm run sync` to resume after failures or session expiry.
+```
+<statementsDir>/
+  EUR/
+    2024-01-01.EUR.statement.pdf
+    2024-02-01.EUR.statement.pdf
+  GBP/
+    2024-01-01.GBP.statement.pdf
+    ...
+```
 
-**Important:** Your Wise session cookie will expire if the website logs you out. Keep your browser open on the Wise site and periodically refresh the page while the script is running to keep the session alive. If the session does expire, grab a fresh cookie value, update `config.json`, and re-run — already-downloaded statements will be skipped.
+Progress is persisted to `tmp/pending.json`, and already-downloaded statements are skipped, so you can safely re-run to resume after failures or session expiry.
+
+### Sync transaction history (activities)
+
+```bash
+npm run sync:activities
+```
+
+Fetches your full transaction history from `startDate` to now in a single pass (paginating in batches of 500), then converts it to CSV.
+
+Output (both in `tmp/`):
+
+- `activities-raw.json` — raw API response
+- `activities.csv` — cleaned CSV with columns: `date`, `type`, `direction`, `title`, `description`, `amount`, `currency`, `secondaryAmount`, `secondaryCurrency`, `category`, `status`, `id`
+
+The `direction` column is `credit` for incoming funds and `debit` for outgoing.
+
+## Resumability
+
+Statement sync is resumable — already-downloaded PDFs are skipped on re-run, and pending requests are persisted to `tmp/pending.json`.
+
+Activities sync re-fetches the full history each run (it's a single fast API call).
+
+**Important:** Your Wise session cookie will expire if the website logs you out. Keep your browser open on the Wise site and periodically refresh the page while the script is running to keep the session alive. If the session expires, grab a fresh cookie, update `config.json`, and re-run.
+
+## Project structure
+
+```
+src/
+  shared.ts                       — Config, auth headers, shared utilities
+  sync-monthly-pdf-statements.ts  — PDF statement sync
+  activities.ts                   — Transaction history fetch
+  activities-to-csv.ts            — Raw JSON to CSV conversion
+```
 
 ## Disclaimer
 

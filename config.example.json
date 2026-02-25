@@ -2,5 +2,6 @@
   "startDate": "2024-01",
   "profileId": "YOUR_PROFILE_ID",
   "cookies": "paste your full Cookie header value here",
-  "currencies": ["EUR", "GBP", "USD", "CAD"]
+  "currencies": ["EUR", "GBP", "USD", "CAD"],
+  "statementsDir": "/path/to/your/statements"
 }

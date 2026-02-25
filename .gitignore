@@ -14,4 +14,6 @@ yarn-error.log*
 config.json
 /dist
 /tmp
-/statements.DS_Store
+/statements
+/activities
+.DS_Store

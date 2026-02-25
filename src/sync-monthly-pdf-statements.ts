@@ -1,13 +1,6 @@
 import fs from "fs";
 import path from "path";
-
-interface Config {
-  startDate: string;
-  profileId: string;
-  cookies: string;
-  currencies: string[];
-  delayMs?: number;
-}
+import { Config, loadConfig, sleep, getMonths, authHeaders } from "./shared";
 
 interface CreateResponse {
   action: {
@@ -23,21 +16,15 @@ interface PendingStatement {
 }
 
 const TMP_DIR = path.join(__dirname, "..", "tmp");
-const OUTPUT_DIR = path.join(__dirname, "..", "statements");
 const PENDING_FILE = path.join(TMP_DIR, "pending.json");
 
-function loadConfig(): Config {
-  const configPath = path.join(__dirname, "..", "config.json");
-  if (!fs.existsSync(configPath)) {
-    console.error("Missing config.json — copy config.example.json and fill in your details.");
-    process.exit(1);
-  }
-  return JSON.parse(fs.readFileSync(configPath, "utf-8"));
-}
+let OUTPUT_DIR: string;
 
-function ensureDirs() {
+function ensureDirs(currencies: string[]) {
   fs.mkdirSync(TMP_DIR, { recursive: true });
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  for (const currency of currencies) {
+    fs.mkdirSync(path.join(OUTPUT_DIR, currency), { recursive: true });
+  }
 }
 
 function loadPending(): PendingStatement[] {
@@ -48,8 +35,6 @@ function loadPending(): PendingStatement[] {
 function savePending(pending: PendingStatement[]) {
   fs.writeFileSync(PENDING_FILE, JSON.stringify(pending, null, 2));
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function lastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
@@ -62,29 +47,7 @@ function extractRequestId(url: string): string {
 }
 
 function outputPath(month: string, currency: string): string {
-  return path.join(OUTPUT_DIR, `${month}-01.${currency}.statement.pdf`);
-}
-
-function getMonths(startDate: string): string[] {
-  const [startYear, startMonth] = startDate.split("-").map(Number);
-  const now = new Date();
-  const endYear = now.getFullYear();
-  const endMonth = now.getMonth();
-
-  const months: string[] = [];
-  let year = startYear;
-  let month = startMonth;
-
-  while (year < endYear || (year === endYear && month <= endMonth)) {
-    months.push(`${year}-${String(month).padStart(2, "0")}`);
-    month++;
-    if (month > 12) {
-      month = 1;
-      year++;
-    }
-  }
-
-  return months;
+  return path.join(OUTPUT_DIR, currency, `${month}-01.${currency}.statement.pdf`);
 }
 
 async function fetchBalanceIds(config: Config): Promise<Record<string, number>> {
@@ -94,11 +57,7 @@ async function fetchBalanceIds(config: Config): Promise<Record<string, number>> 
 
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-access-token": "Tr4n5f3rw153",
-      Cookie: config.cookies,
-    },
+    headers: authHeaders(config),
   });
 
   if (!response.ok) {
@@ -146,11 +105,7 @@ async function createStatement(config: Config, month: string, balanceId: number)
 
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-access-token": "Tr4n5f3rw153",
-      Cookie: config.cookies,
-    },
+    headers: authHeaders(config),
     body: JSON.stringify(body),
   });
 
@@ -168,11 +123,7 @@ async function downloadStatement(config: Config, requestId: string, dest: string
 
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-access-token": "Tr4n5f3rw153",
-      Cookie: config.cookies,
-    },
+    headers: authHeaders(config),
   });
 
   if (!response.ok) {
@@ -187,7 +138,11 @@ async function downloadStatement(config: Config, requestId: string, dest: string
 async function main() {
   const config = loadConfig();
   const delay = config.delayMs ?? 1000;
-  ensureDirs();
+  if (!config.statementsDir) {
+    console.error("Missing statementsDir in config.json.");
+    process.exit(1);
+  }
+  OUTPUT_DIR = config.statementsDir.replace(/^~/, process.env.HOME!);
 
   const balanceMap = await fetchBalanceIds(config);
 
@@ -202,8 +157,11 @@ async function main() {
     currencies.push([code.toUpperCase(), id]);
   }
 
+  ensureDirs(currencies.map(([c]) => c));
+
   const months = getMonths(config.startDate);
 
+  console.log(`Output: ${OUTPUT_DIR}`);
   console.log(`Months: ${months[0]} to ${months[months.length - 1]} (${months.length} months)`);
   console.log(`Currencies: ${currencies.map(([c]) => c).join(", ")}\n`);
 
