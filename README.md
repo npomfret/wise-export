@@ -1,6 +1,6 @@
 # wise-export
 
-An unofficial tool to generate PDF statements from [Wise](https://wise.com) (formerly TransferWise) personal accounts.
+An unofficial tool to bulk-export PDF statements from [Wise](https://wise.com) (formerly TransferWise) personal accounts.
 
 ## Background
 
@@ -33,10 +33,7 @@ Edit `config.json` with your details:
   "startDate": "2024-01",
   "profileId": "1234567",
   "cookies": "...",
-  "balances": {
-    "EUR": 12345,
-    "GBP": 12346
-  },
+  "currencies": ["EUR", "GBP", "USD", "CAD"],
   "delayMs": 1000
 }
 ```
@@ -44,12 +41,12 @@ Edit `config.json` with your details:
 | Field | Description |
 |---|---|
 | `startDate` | First month to export (YYYY-MM). Statements are generated from this month up to (but not including) the current month. |
-| `profileId` | Your Wise profile ID (visible in the URL when logged in). |
+| `profileId` | Your Wise profile ID (see below). |
 | `cookies` | Your browser session cookies (see below). |
-| `balances` | Mapping of currency code to Wise balance ID. |
-| `delayMs` | Delay between API requests in milliseconds (default: 1000). |
+| `currencies` | List of currency codes to export statements for. Balance IDs are fetched automatically. |
+| `delayMs` | Optional delay between API requests in milliseconds (default: 1000). |
 
-### Getting your cookies
+### Getting your profile ID and cookies
 
 1. Log in to [wise.com](https://wise.com) in your browser
 2. Open Developer Tools (F12 or Cmd+Option+I)
@@ -57,20 +54,9 @@ Edit `config.json` with your details:
 4. Navigate to **Balances > Statements** and generate a statement for any period
 5. Find the `create?action=request` POST request in the network log
 6. Right-click the request and choose **Copy as cURL**
-7. Extract the `Cookie:` header value from the copied curl command and paste it into `config.json`
-
-The cookies will expire when your Wise session ends — you'll need to repeat this process when that happens.
-
-### Getting your balance IDs
-
-From the same copied curl command, look at the request body — the `balances` array contains your balance IDs. To figure out which ID maps to which currency, check the currency dropdown on the Wise statements page — the order matches the array order.
-
-### Getting your profile ID
-
-Your profile ID appears in the URL of the curl command:
-```
-https://wise.com/hold/v1/profiles/YOUR_PROFILE_ID/statements-and-reports/...
-```
+7. From the copied curl command:
+   - Extract the `Cookie:` header value and paste it into `config.json`
+   - Extract your profile ID from the URL: `https://wise.com/hold/v1/profiles/YOUR_PROFILE_ID/statements-and-reports/...`
 
 ## Usage
 
@@ -78,12 +64,14 @@ https://wise.com/hold/v1/profiles/YOUR_PROFILE_ID/statements-and-reports/...
 npm run sync
 ```
 
-The script runs in two phases:
+The script runs two concurrent tasks:
 
-1. **Create** — requests a statement for each currency/month combination and saves the request IDs to `tmp/pending.json`
-2. **Download** — downloads each generated PDF to `statements/`
+1. **Creator** — iterates through each currency/month combination, posts a statement creation request, and queues the request ID for download
+2. **Downloader** — polls the queue, downloading generated PDFs as they become ready, retrying if a statement isn't available yet
 
-Already-downloaded statements are skipped, so you can safely re-run `npm run sync` to resume after failures or session expiry.
+Output files are saved to `statements/` as `YYYY-MM-01.CCY.statement.pdf`.
+
+Progress is persisted to `tmp/pending.json`, and already-downloaded statements are skipped, so you can safely re-run `npm run sync` to resume after failures or session expiry.
 
 **Important:** Your Wise session cookie will expire if the website logs you out. Keep your browser open on the Wise site and periodically refresh the page while the script is running to keep the session alive. If the session does expire, grab a fresh cookie value, update `config.json`, and re-run — already-downloaded statements will be skipped.
 
