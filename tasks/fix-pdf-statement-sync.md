@@ -1,5 +1,13 @@
 # Fix PDF statement sync
 
+## Resolution (2026-11-04)
+
+The new multi-step form was captured and statement creation verified. Four separate monthly PDF schedules (EUR, GBP, CAD and USD) were created in Wise, starting November 2026, with the next statements due on 1 December 2026.
+
+PDF downloads also require a separate Strong Customer Authentication approval. The captured flow was HTTP 403 → passkey approval → HTTP 200 PDF; the approval could not be reused, and an updated login cookie alone was insufficient. At the user's request, PDF sync was removed from this project rather than retaining a workflow requiring manual approval per download. `npm run sync` now fetches activities and converts them to CSV. Existing local PDFs and Wise schedules are preserved.
+
+Activity fetching was reverified with the refreshed cookie: 655 activities. The details below describe the original issue.
+
 ## Problem
 
 `npm run sync` dies in `src/sync-monthly-pdf-statements.ts` at `fetchBalanceIds()`:

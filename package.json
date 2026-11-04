@@ -5,8 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "sync": "npx tsx src/sync-monthly-pdf-statements.ts && npx tsx src/activities.ts",
-    "sync:statements": "npx tsx src/sync-monthly-pdf-statements.ts",
+    "sync": "npm run sync:activities",
     "sync:activities": "npx tsx src/activities.ts && npx tsx src/activities-to-csv.ts",
     "activities:csv": "npx tsx src/activities-to-csv.ts"
   },

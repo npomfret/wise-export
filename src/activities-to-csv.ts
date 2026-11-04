@@ -61,8 +61,10 @@ function main() {
   }
 
   const config = loadConfig();
-  const statementsDir = config.statementsDir.replace(/^~/, process.env.HOME!);
-  const outputFile = path.join(statementsDir, "activities.csv");
+  const directory = config.outputDir ?? config.statementsDir;
+  if (!directory) throw new Error("Missing outputDir in config.json.");
+  const outputDir = directory.replace(/^~/, process.env.HOME!);
+  const outputFile = path.join(outputDir, "activities.csv");
 
   const activities: any[] = JSON.parse(fs.readFileSync(INPUT_FILE, "utf-8"));
 

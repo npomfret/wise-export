@@ -5,9 +5,10 @@ export interface Config {
   startDate: string;
   profileId: string;
   cookies: string;
-  currencies: string[];
   delayMs?: number;
-  statementsDir: string;
+  outputDir?: string;
+  /** Legacy output directory setting, retained for existing configurations. */
+  statementsDir?: string;
 }
 
 export function loadConfig(): Config {
@@ -20,28 +21,6 @@ export function loadConfig(): Config {
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-export function getMonths(startDate: string): string[] {
-  const [startYear, startMonth] = startDate.split("-").map(Number);
-  const now = new Date();
-  const endYear = now.getFullYear();
-  const endMonth = now.getMonth();
-
-  const months: string[] = [];
-  let year = startYear;
-  let month = startMonth;
-
-  while (year < endYear || (year === endYear && month <= endMonth)) {
-    months.push(`${year}-${String(month).padStart(2, "0")}`);
-    month++;
-    if (month > 12) {
-      month = 1;
-      year++;
-    }
-  }
-
-  return months;
-}
 
 export function authHeaders(config: Config): Record<string, string> {
   return {
