@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "test": "node --import tsx --test --test-concurrency=1 test/*.test.ts",
     "sync": "npm run sync:activities",
     "sync:activities": "npx tsx src/activities.ts && npx tsx src/activities-to-csv.ts",
     "activities:csv": "npx tsx src/activities-to-csv.ts"

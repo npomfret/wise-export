@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { loadConfig } from "./shared";
+import { writeVersionedFile } from "./versioned-file";
 
 const INPUT_FILE = path.join(__dirname, "..", "tmp", "activities-raw.json");
 
@@ -75,9 +76,9 @@ function main() {
   const rows = activities.map(activityToRow);
   const csv = [COLUMNS.join(","), ...rows.map(row => row.map(csvEscape).join(","))].join("\n");
 
-  fs.mkdirSync(path.dirname(outputFile), { recursive: true });
-  fs.writeFileSync(outputFile, csv);
-  console.log(`${activities.length} activities → ${outputFile}`);
+  const result = writeVersionedFile(outputFile, csv);
+  console.log(`${activities.length} activities → ${outputFile} (${result.status}; SHA-256 ${result.hash})`);
+  if (result.archivePath) console.log(`Previous CSV preserved: ${result.archivePath}`);
 }
 
 main();

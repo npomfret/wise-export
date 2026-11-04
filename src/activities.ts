@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { loadConfig, sleep, authHeaders } from "./shared";
+import { writeVersionedFile } from "./versioned-file";
 
 const OUTPUT_FILE = path.join(__dirname, "..", "tmp", "activities-raw.json");
 const PAGE_SIZE = 500;
@@ -60,9 +61,10 @@ async function main() {
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
 
   const activities = await fetchAllActivities(config);
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(activities, null, 2));
+  const result = writeVersionedFile(OUTPUT_FILE, JSON.stringify(activities, null, 2));
 
-  console.log(`\nDone — ${activities.length} activities saved to ${OUTPUT_FILE}`);
+  console.log(`\nDone — ${activities.length} activities: ${result.status} (${OUTPUT_FILE})`);
+  if (result.archivePath) console.log(`Previous raw export preserved: ${result.archivePath}`);
 }
 
 main();

@@ -62,13 +62,16 @@ npm run activities:csv
 
 Each sync fetches the full configured history again. PDF statement sync has been removed: Wise's current download flow requires additional approval for each PDF, preventing unattended exports with browser cookies. Existing local PDFs are left untouched. Recurring schedules configured on wise.com are managed separately and are not changed by this project.
 
+Both the raw JSON and CSV are compared with the existing files using SHA-256. Identical files are left untouched. If an export changes, its previous bytes are saved alongside it as `activities.previous-<old-sha256>.csv` (or `activities-raw.previous-<old-sha256>.json`), then the latest export is replaced atomically. Existing archives are retained. This detects any byte change, including formatting changes; new transactions will also create a new version.
+
 ## Development
 
 ```bash
 npm run build
+npm test
 ```
 
-`src/shared.ts` handles configuration and authentication headers, `src/activities.ts` fetches history, and `src/activities-to-csv.ts` converts it to CSV.
+`src/shared.ts` handles configuration and authentication headers, `src/activities.ts` fetches history, `src/activities-to-csv.ts` converts it to CSV, and `src/versioned-file.ts` preserves changed exports. Tests run serially with one worker.
 
 ## Disclaimer
 
