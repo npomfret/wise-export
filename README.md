@@ -73,3 +73,11 @@ npm run build
 ## Disclaimer
 
 This tool is provided as-is for personal use. It interacts with undocumented APIs and may break without notice. This project is not affiliated with, endorsed by, or associated with Wise or TransferWise.
+
+## Why PDF support had to go
+
+Wise has made exporting your own financial records needlessly bloody difficult. This project had perfectly good functionality: download a PDF for each currency, for each month, and keep a local archive. Wise changed the statement form, which was fixable. The real problem was the download: even with a valid login cookie, it demanded another identity check. Approving the passkey prompt released one PDF; that approval could not be reused for the next download. An unattended bulk export had become a job of manually approving individual files.
+
+That is maddening. These are the customer's own statements. Keeping a complete local copy should be a routine feature, not an afternoon spent babysitting authentication prompts. PDF support was removed because the browser-cookie workflow could no longer do its job automatically. CSV activity export still works.
+
+Wise: let customers export their own bloody data.
