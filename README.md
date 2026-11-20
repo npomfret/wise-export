@@ -1,5 +1,17 @@
 # wise-export
 
+## Retired
+
+This project is permanently retired and is no longer maintained. Wise now provides a full transaction-history export on its website, so this tool is no longer needed.
+
+To export your transactions, sign in to Wise on the web, open **Transactions**, apply any filters you need, then select **Export** and choose **CSV** or **PDF**. Each export covers up to 365 days; use multiple exports for a longer history.
+
+See [Wise's transaction-history export instructions](https://wise.com/help/articles/2489458/how-do-i-download-my-transaction-history).
+
+This repository is archived and retained for reference. The documentation below describes the retired tool and its earlier limitations.
+
+## Historical documentation
+
 An unofficial tool to export transaction history from [Wise](https://wise.com) personal accounts to CSV.
 
 It uses the same internal activities API as the Wise website. Wise can change this API without notice.
